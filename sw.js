@@ -1,6 +1,6 @@
 // Overload service worker: serve the app from the phone so it opens instantly with no signal.
 // Bump VERSION on every deploy; the new copy downloads in the background and is used next launch.
-const VERSION = 'overload-1.0';
+const VERSION = 'overload-1.1';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/apple-touch-icon.png', './icons/icon-192.png', './icons/icon-512.png',

@@ -225,7 +225,7 @@ nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;st
 </div></nav>
 <div id="sheetroot"></div>
 <input type="file" id="photoin" accept="image/*" hidden>
-<input type="file" id="importin" accept="application/json,.json" hidden>
+<input type="file" id="importin" hidden>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -939,7 +939,8 @@ function sheetSettings(){const c=cfg();const un=c.unavail||[];
   <div class="offchips">${Object.entries(EQ).map(([k,l])=>`<button class="${(c.gymNo||[]).includes(k)?'on':''}" data-act="gymno" data-k="${k}">${l}</button>`).join('')}</div>
   ${un.length?`<p class="small muted">Never suggested:</p><div class="list">${un.map(id=>`<div class="li small"><span class="grow">${esc(ex(id).n)}</span><button class="sm" data-act="unavail-rm" data-id="${id}">Allow again</button></div>`).join('')}</div>`:'<p class="tiny muted">When you swap an exercise you can mark it "not at my gym" and it stops being suggested.</p>'}</div>
   <div class="card"><h3>Data</h3><p class="small muted">Everything is stored on this phone only, nowhere online. ${c.lastBackup?`Last backup ${ago(c.lastBackup)}.`:'No backup yet.'} A backup is a file you can keep in iCloud Drive or send to yourself.</p>
-  <div class="grid2"><button class="primary" data-act="export">Back up now</button><button data-act="import">Restore backup</button></div>
+  <div class="grid2"><button class="primary" data-act="export">Back up now</button><button data-act="import">Restore from file</button></div>
+  <button data-act="pastecode">Paste an import code</button>
   <button data-act="templates">Set up PPL A/B programme</button></div>
   <p class="tiny muted">Overload ${APPV}. To install: open the link in Safari, tap Share, then Add to Home Screen.</p>`}
 
@@ -1028,6 +1029,8 @@ const ACT={
  stoff:b=>{const k=b.dataset.k;draft.off=draft.off.includes(k)?draft.off.filter(x=>x!==k):[...draft.off,k];drawSheet()},
  gymno:async b=>{const k=b.dataset.k,c=cfg(),g=c.gymNo||[];await put('settings','main',{...c,gymNo:g.includes(k)?g.filter(x=>x!==k):[...g,k]},true);drawSheet()},
  'unavail-rm':async b=>{const c=cfg();await put('settings','main',{...c,unavail:(c.unavail||[]).filter(x=>x!==b.dataset.id)},true);drawSheet()},
+ pastecode:()=>openSheet(()=>`<h2>Paste import code</h2><p class="small muted">Paste the code Claude gave you, or the contents of a backup file.</p><textarea id="paste-in" style="min-height:160px" placeholder="Paste here"></textarea><button class="primary wide" data-act="pasteimport">Import</button>`),
+ pasteimport:async()=>{const t=($('#paste-in')?.value||'').trim();if(!t){toast('Paste the code first.');return}let d;try{d=decodeImport(t)}catch(e){toast('That code is incomplete. Copy it again in full.');return}await importData(d)},
  importyes:async()=>{const d=pendingImport;pendingImport=null;closeSheet();await importData(d)},
  checkin:()=>preStart(nextRoutine(),true), sorearea:b=>{const k=b.dataset.k;draft.soreAreas=draft.soreAreas.includes(k)?draft.soreAreas.filter(x=>x!==k):[...draft.soreAreas,k];drawSheet()},
  stbusy:b=>{draft.busy=+b.dataset.v;drawSheet()},
@@ -1079,6 +1082,9 @@ async function importData(d){let n=0;
   ver++;closeSheet();render(true);toast(`Imported ${n} records.`)}
 $('#importin').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;let d;try{d=JSON.parse(await f.text());if(d.app!=='overload')throw 0}catch(err){toast('That file is not an Overload backup.');return}await importData(d)});
 let pendingImport=null;
+function decodeImport(t){t=t.replace(/^.*#import=/,'').replace(/\s+/g,'');if(t.startsWith('{'))return checkD(JSON.parse(t));
+  const b=atob(t.replace(/-/g,'+').replace(/_/g,'/')),d=JSON.parse(new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0))));return checkD(d)}
+function checkD(d){if(!d||d.app!=='overload')throw new Error('not overload');return d}
 function checkHashImport(){const m=location.hash.match(/^#import=([A-Za-z0-9_\-]+)$/);if(!m)return;
   try{const b=atob(m[1].replace(/-/g,'+').replace(/_/g,'/')),d=JSON.parse(new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0))));if(d.app!=='overload')throw 0;pendingImport=d;
     const n=['routines','workouts','weighins','photos','exercises','cardio','sauna'].reduce((a,c)=>a+Object.keys(d[c]||{}).length,0);
@@ -1087,7 +1093,7 @@ function checkHashImport(){const m=location.hash.match(/^#import=([A-Za-z0-9_\-]
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}}
 
 // ================= boot =================
-const APPV='1.0';
+const APPV='1.1';
 async function boot(){render(true);
   try{idb=await idbOpen();for(const[k,v]of await idbAll()){const x=k.indexOf('/'),c=k.slice(0,x),id=k.slice(x+1);if(S[c])S[c][id]=v}mode='idb'}
   catch(e){const L=lsLoad();if(L)COLLS.forEach(c=>S[c]=L[c]||{});mode='local'}
