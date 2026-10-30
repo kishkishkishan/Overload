@@ -942,6 +942,7 @@ function sheetSettings(){const c=cfg();const un=c.unavail||[];
   <div class="grid2"><button class="primary" data-act="export">Back up now</button><button data-act="import">Restore from file</button></div>
   <button data-act="pastecode">Paste an import code</button>
   <button data-act="templates">Set up PPL A/B programme</button></div>
+  <button data-act="checkupdate">Check for updates</button>
   <p class="tiny muted">Overload ${APPV}. To install: open the link in Safari, tap Share, then Add to Home Screen.</p>`}
 
 // ================= sheet plumbing =================
@@ -1029,6 +1030,8 @@ const ACT={
  stoff:b=>{const k=b.dataset.k;draft.off=draft.off.includes(k)?draft.off.filter(x=>x!==k):[...draft.off,k];drawSheet()},
  gymno:async b=>{const k=b.dataset.k,c=cfg(),g=c.gymNo||[];await put('settings','main',{...c,gymNo:g.includes(k)?g.filter(x=>x!==k):[...g,k]},true);drawSheet()},
  'unavail-rm':async b=>{const c=cfg();await put('settings','main',{...c,unavail:(c.unavail||[]).filter(x=>x!==b.dataset.id)},true);drawSheet()},
+ checkupdate:async b=>{b.disabled=true;b.textContent='Checking…';try{const r=await navigator.serviceWorker.getRegistration();if(!r){location.reload();return}
+   wantReload=true;await r.update();setTimeout(()=>{if(wantReload){b.disabled=false;b.textContent='Check for updates';toast(`You're on the latest version (${APPV}).`);wantReload=false}},6000)}catch(e){b.disabled=false;b.textContent='Check for updates';toast('No connection. Try again with signal.')}},
  pastecode:()=>openSheet(()=>`<h2>Paste import code</h2><p class="small muted">Paste the code Claude gave you, or the contents of a backup file.</p><textarea id="paste-in" style="min-height:160px" placeholder="Paste here"></textarea><button class="primary wide" data-act="pasteimport">Import</button>`),
  pasteimport:async()=>{const t=($('#paste-in')?.value||'').trim();if(!t){toast('Paste the code first.');return}let d;try{d=decodeImport(t)}catch(e){toast('That code is incomplete. Copy it again in full.');return}await importData(d)},
  importyes:async()=>{const d=pendingImport;pendingImport=null;closeSheet();await importData(d)},
@@ -1093,7 +1096,8 @@ function checkHashImport(){const m=location.hash.match(/^#import=([A-Za-z0-9_\-]
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}}
 
 // ================= boot =================
-const APPV='1.1';
+const APPV='1.2';
+let wantReload=false;
 async function boot(){render(true);
   try{idb=await idbOpen();for(const[k,v]of await idbAll()){const x=k.indexOf('/'),c=k.slice(0,x),id=k.slice(x+1);if(S[c])S[c][id]=v}mode='idb'}
   catch(e){const L=lsLoad();if(L)COLLS.forEach(c=>S[c]=L[c]||{});mode='local'}
@@ -1101,7 +1105,7 @@ async function boot(){render(true);
   try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
   if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
-    let had=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(had)toast('App updated. It loads next time you open it.');had=true})}}
+    let had=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(wantReload){flushActive();location.reload();return}if(had)toast('App updated. It loads next time you open it.');had=true})}}
 boot();
 })();
 </script>
